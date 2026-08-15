@@ -26,7 +26,7 @@ from flask import (
 )
 
 from config import Config, config as app_config
-from db import db_cursor, is_db_reachable, is_duplicate_error
+from db import db_cursor, db_status, is_db_reachable, is_duplicate_error
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -1136,11 +1136,13 @@ def api_categories():
 
 @app.route("/api/health")
 def api_health():
+    reachable, error = db_status()
     return jsonify(
         {
-            "status": "ok" if is_db_reachable() else "unavailable",
+            "status": "ok" if reachable else "unavailable",
             "database": Config.DB_NAME,
             "host": Config.DB_HOST,
+            "error": error,
         }
     )
 

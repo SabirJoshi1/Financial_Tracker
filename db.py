@@ -31,13 +31,18 @@ def get_connection():
 
 def is_db_reachable():
     """Return True when the configured database can be reached."""
+    return db_status()[0]
+
+
+def db_status():
+    """Return (reachable: bool, error_or_none) for the configured database."""
     try:
         with db_cursor() as (_, cursor):
             cursor.execute("SELECT 1")
             cursor.fetchone()
-        return True
-    except psycopg2.Error:
-        return False
+        return True, None
+    except psycopg2.Error as err:
+        return False, str(err)
 
 
 @contextmanager
