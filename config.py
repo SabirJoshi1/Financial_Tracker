@@ -40,7 +40,7 @@ class Config:
     # Database - prefer a full connection URL; individual parts are a fallback.
     DATABASE_URL = os.getenv("DATABASE_URL", "")
     DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-    DB_PORT = int(os.getenv("DB_PORT", "5432"))
+    DB_PORT = int(os.getenv("DB_PORT") or "5432")
     DB_USER = os.getenv("DB_USER", "postgres")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
     DB_NAME = os.getenv("DB_NAME", "financial_tracker")
