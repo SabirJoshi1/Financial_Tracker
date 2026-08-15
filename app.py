@@ -26,7 +26,7 @@ from flask import (
 )
 
 from config import Config, config as app_config
-from db import db_cursor, db_status, is_db_reachable, is_duplicate_error, _force_ipv4
+from db import db_cursor, db_status, is_db_reachable, is_duplicate_error
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -1137,23 +1137,12 @@ def api_categories():
 @app.route("/api/health")
 def api_health():
     reachable, error = db_status()
-    diagnostics = {}
-    if Config.DATABASE_URL:
-        from urllib.parse import urlparse
-
-        host = urlparse(Config.DATABASE_URL).hostname
-        diagnostics = {
-            "has_url": True,
-            "db_host": host,
-            "rewritten_to": _force_ipv4(host),
-        }
     return jsonify(
         {
             "status": "ok" if reachable else "unavailable",
             "database": Config.DB_NAME,
             "host": Config.DB_HOST,
             "error": error,
-            **diagnostics,
         }
     )
 
