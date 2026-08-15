@@ -26,7 +26,7 @@ from flask import (
 )
 
 from config import Config, config as app_config
-from db import db_cursor, db_status, is_db_reachable, is_duplicate_error
+from db import db_cursor, db_status, is_db_reachable, is_duplicate_error, _force_ipv4_url
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -1143,6 +1143,8 @@ def api_health():
             "database": Config.DB_NAME,
             "host": Config.DB_HOST,
             "error": error,
+            "has_url": bool(Config.DATABASE_URL),
+            "connect_url": _force_ipv4_url(Config.DATABASE_URL)[:40] if Config.DATABASE_URL else None,
         }
     )
 

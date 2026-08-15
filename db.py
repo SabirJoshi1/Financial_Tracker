@@ -7,7 +7,7 @@ or rolled back consistently.
 
 import socket
 from contextlib import contextmanager
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import psycopg2
 import psycopg2.extras
@@ -32,15 +32,23 @@ def _force_ipv4(host):
         return host
 
 
+def _force_ipv4_url(url):
+    """Return the connection URL with its host replaced by an IPv4 address."""
+    parts = urlparse(url)
+    if not parts.hostname:
+        return url
+    ipv4 = _force_ipv4(parts.hostname)
+    if not ipv4 or ipv4 == parts.hostname:
+        return url
+    netloc = parts.netloc.replace(parts.hostname, ipv4)
+    return urlunparse(parts._replace(netloc=netloc))
+
+
 def get_connection():
     """Return a new PostgreSQL connection using the configured credentials."""
     common = {"cursor_factory": psycopg2.extras.RealDictCursor}
     if Config.DATABASE_URL:
-        host = urlparse(Config.DATABASE_URL).hostname
-        ipv4 = _force_ipv4(host)
-        if ipv4 and ipv4 != host:
-            return psycopg2.connect(Config.DATABASE_URL, host=ipv4, **common)
-        return psycopg2.connect(Config.DATABASE_URL, **common)
+        return psycopg2.connect(_force_ipv4_url(Config.DATABASE_URL), **common)
     return psycopg2.connect(
         host=_force_ipv4(Config.DB_HOST),
         port=Config.DB_PORT,
