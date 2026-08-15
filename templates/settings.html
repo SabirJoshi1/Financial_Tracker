@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Settings · {{ app_name }}{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+
+<div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Database Status</h2>
+      <span class="badge badge-muted" id="db-status-badge">Checking...</span>
+    </div>
+    <div class="settings-list" id="db-details">
+      <p style="color:var(--text-muted)">Checking connection...</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Data Export</h2>
+    </div>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:16px">
+      Download your transactions as a CSV file. You can filter by type or month before exporting.
+    </p>
+    <div class="report-select" style="margin-bottom:14px">
+      <label for="exp-type">Type</label>
+      <select class="form-select" id="exp-type">
+        <option value="">All transactions</option>
+        <option value="income">Income only</option>
+        <option value="expense">Expenses only</option>
+      </select>
+    </div>
+    <div class="report-select" style="margin-bottom:18px">
+      <label for="exp-month">Month</label>
+      <select class="form-select" id="exp-month"></select>
+    </div>
+    <button class="btn btn-primary" id="btn-export">Export CSV</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Configuration</h2>
+    </div>
+    <div class="settings-list">
+      <div class="settings-item">
+        <span class="settings-key">Application</span>
+        <span class="settings-val">{{ app_name }}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-key">Currency</span>
+        <span class="settings-val">{{ currency }}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-key">Database</span>
+        <span class="settings-val">{{ db_name }} @ {{ db_host }}</span>
+      </div>
+      <div class="settings-item">
+        <span class="settings-key">Environment</span>
+        <span class="settings-val">Development</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}

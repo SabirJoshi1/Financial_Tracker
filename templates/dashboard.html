@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="cards-grid" id="stat-cards">
+  <div class="card stat-card" style="--tint: #eef2ff">
+    <div class="stat-label">Current Balance</div>
+    <div class="stat-value" id="stat-balance">—</div>
+    <div class="stat-sub">All-time income − expenses</div>
+  </div>
+  <div class="card stat-card" style="--tint: #ecfdf5">
+    <div class="stat-label">Monthly Income</div>
+    <div class="stat-value" id="stat-income">—</div>
+    <div class="stat-sub" id="stat-income-sub">This month</div>
+  </div>
+  <div class="card stat-card" style="--tint: #fef2f2">
+    <div class="stat-label">Monthly Expenses</div>
+    <div class="stat-value" id="stat-expense">—</div>
+    <div class="stat-sub" id="stat-expense-sub">This month</div>
+  </div>
+  <div class="card stat-card" style="--tint: #fffbeb">
+    <div class="stat-label">Savings</div>
+    <div class="stat-value" id="stat-savings">—</div>
+    <div class="stat-sub" id="stat-savings-sub">This month</div>
+  </div>
+  <div class="card stat-card" style="--tint: #f0f9ff">
+    <div class="stat-label">Savings Rate</div>
+    <div class="stat-value" id="stat-rate">—</div>
+    <div class="stat-sub">% of monthly income saved</div>
+  </div>
+  <div class="card stat-card" style="--tint: #faf5ff">
+    <div class="stat-label">Budget Remaining</div>
+    <div class="stat-value" id="stat-budget">—</div>
+    <div class="stat-sub" id="stat-budget-sub">This month</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Expenses by Category</h2>
+      <span class="badge badge-muted" id="doughnut-month"></span>
+    </div>
+    <div class="chart-box">
+      <canvas id="chart-doughnut" height="120"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Income vs Expenses</h2>
+      <span class="badge badge-muted">Last 6 months</span>
+    </div>
+    <div class="chart-box">
+      <canvas id="chart-bar" height="120"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 24px">
+  <div class="card-header">
+    <h2 class="card-title">Monthly Spending History</h2>
+    <span class="badge badge-muted">Last 6 months</span>
+  </div>
+  <div class="chart-box">
+    <canvas id="chart-line" height="90"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Recent Transactions</h2>
+    <a href="{{ url_for('transactions_page') }}" class="btn btn-secondary btn-sm">View all</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Payment</th>
+          <th style="text-align:right">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="recent-tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty-state" id="recent-empty" hidden>
+    <div class="empty-icon">🗒</div>
+    <p>No transactions yet. Add your first transaction to get started.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

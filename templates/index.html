@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome · {{ app_name }}{% endblock %}
+{% block page_title %}Welcome{% endblock %}
+
+{% block content %}
+
+<div class="splash">
+  <div class="splash-brand">
+    <span class="brand-icon">◈</span>
+    <span>{{ app_name }}</span>
+  </div>
+  <h1>Your money, clearly in view.</h1>
+  <p>Track income, expenses, budgets and savings goals in one clean dashboard. Everything is stored locally in your own database.</p>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="padding:12px 26px; font-size:15px">Open Dashboard →</a>
+</div>
+
+{% endblock %}

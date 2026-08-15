@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Goals · {{ app_name }}{% endblock %}
+{% block page_title %}Financial Goals{% endblock %}
+
+{% block content %}
+
+<div class="report-row">
+  <div class="toolbar-label" style="color:var(--text-muted); font-size:14px">
+    Set savings targets and track your progress toward them.
+  </div>
+  <button class="btn btn-primary" id="btn-add-goal">+ Add Goal</button>
+</div>
+
+<div class="cards-grid" id="goal-cards">
+  <div class="card" style="grid-column: 1 / -1; text-align:center; padding: 40px">
+    <div class="empty-state" style="padding:0">
+      <div class="empty-icon">◎</div>
+      <p id="goal-empty-msg">Loading goals...</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/goals.js') }}"></script>
+{% endblock %}

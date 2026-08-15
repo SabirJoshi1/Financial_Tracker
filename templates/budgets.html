@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Budgets · {{ app_name }}{% endblock %}
+{% block page_title %}Budgets{% endblock %}
+
+{% block content %}
+
+<div class="report-row">
+  <div class="report-select">
+    <label for="budget-month">Month</label>
+    <select class="form-select" id="budget-month"></select>
+  </div>
+  <div class="report-select">
+    <label for="budget-year">Year</label>
+    <select class="form-select" id="budget-year"></select>
+  </div>
+  <button class="btn btn-primary" id="btn-add-budget">+ Add Budget</button>
+</div>
+
+<div class="chips" id="budget-chips">
+  <div class="chip"><span class="chip-label">Total Budget</span><span id="chip-budget">—</span></div>
+  <div class="chip"><span class="chip-label">Spent</span><span id="chip-spent">—</span></div>
+  <div class="chip"><span class="chip-label">Remaining</span><span id="chip-remaining">—</span></div>
+</div>
+
+<div class="cards-grid" id="budget-cards">
+  <div class="card" style="grid-column: 1 / -1; text-align:center; padding: 40px">
+    <div class="empty-state" style="padding:0">
+      <div class="empty-icon">◔</div>
+      <p id="budget-empty-msg">Loading budgets...</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/budgets.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Reports · {{ app_name }}{% endblock %}
+{% block page_title %}Monthly Reports{% endblock %}
+
+{% block content %}
+
+<div class="report-row">
+  <div class="report-select">
+    <label for="rep-month">Month</label>
+    <select class="form-select" id="rep-month"></select>
+  </div>
+  <div class="report-select">
+    <label for="rep-year">Year</label>
+    <select class="form-select" id="rep-year"></select>
+  </div>
+  <span class="badge badge-muted" id="rep-label" style="font-size:13px; padding:10px 14px"></span>
+</div>
+
+<div class="cards-grid" id="rep-cards">
+  <div class="card stat-card" style="--tint: #ecfdf5">
+    <div class="stat-label">Total Income</div>
+    <div class="stat-value" id="rep-income">—</div>
+  </div>
+  <div class="card stat-card" style="--tint: #fef2f2">
+    <div class="stat-label">Total Expenses</div>
+    <div class="stat-value" id="rep-expense">—</div>
+  </div>
+  <div class="card stat-card" style="--tint: #eef2ff">
+    <div class="stat-label">Net Savings</div>
+    <div class="stat-value" id="rep-net">—</div>
+  </div>
+  <div class="card stat-card" style="--tint: #fffbeb">
+    <div class="stat-label">Savings Rate</div>
+    <div class="stat-value" id="rep-rate">—</div>
+  </div>
+  <div class="card stat-card" style="--tint: #f0f9ff">
+    <div class="stat-label">Average Daily Spending</div>
+    <div class="stat-value" id="rep-avg">—</div>
+  </div>
+  <div class="card stat-card" style="--tint: #faf5ff">
+    <div class="stat-label">Highest Spending Category</div>
+    <div class="stat-value" id="rep-highest" style="font-size:20px">—</div>
+    <div class="stat-sub" id="rep-highest-sub"></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:24px">
+  <div class="card-header">
+    <h2 class="card-title">Daily Spending</h2>
+    <span class="badge badge-muted" id="rep-daily-label"></span>
+  </div>
+  <div class="chart-box">
+    <canvas id="chart-daily" height="80"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Budget Performance</h2>
+    <div class="chips" style="margin:0" id="rep-budget-chips"></div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th style="text-align:right">Budget</th>
+          <th style="text-align:right">Spent</th>
+          <th style="text-align:right">Remaining</th>
+          <th style="min-width:160px">Usage</th>
+        </tr>
+      </thead>
+      <tbody id="rep-budget-tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty-state" id="rep-budget-empty" hidden>
+    <div class="empty-icon">◔</div>
+    <p>No budgets set for this month.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}
