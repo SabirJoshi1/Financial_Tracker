@@ -1,18 +1,221 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Financial Tracker - Take control of your finances with smart tracking, budgeting, and goal setting">
+  <title>{{ app_name }} - Your Money, Clearly in View</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+</head>
+<body class="home-body">
 
-{% block title %}Welcome · {{ app_name }}{% endblock %}
-{% block page_title %}Welcome{% endblock %}
+  <!-- Hero Section with Parallax -->
+  <section class="parallax-section hero-section" data-parallax-speed="0.3">
+    <div class="parallax-bg hero-bg"></div>
+    <div class="hero-content">
+      <div class="hero-brand">
+        <span class="brand-icon-large">◈</span>
+      </div>
+      <h1 class="hero-title">Your Money,<br><span class="gradient-text">Clearly in View</span></h1>
+      <p class="hero-subtitle">Track every penny, master your budget, and achieve your financial goals — all in one beautiful dashboard.</p>
+      <div class="hero-cta">
+        <a href="{{ url_for('register_page') }}" class="btn btn-primary btn-lg">Get Started Free</a>
+        <a href="{{ url_for('login_page') }}" class="btn btn-secondary btn-lg">Sign In</a>
+      </div>
+      <p class="hero-slogan">"Financial clarity starts here."</p>
+    </div>
+    <div class="scroll-indicator">
+      <span>Scroll to explore</span>
+      <div class="scroll-arrow">↓</div>
+    </div>
+  </section>
 
-{% block content %}
+  <!-- Features Section -->
+  <section class="parallax-section features-section" data-parallax-speed="0.2">
+    <div class="parallax-bg features-bg"></div>
+    <div class="section-content">
+      <h2 class="section-title">Everything You Need to <span class="gradient-text">Master Your Finances</span></h2>
+      <p class="section-subtitle">Powerful features designed to give you complete control over your money.</p>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Smart Dashboard</h3>
+          <p>Get a complete overview of your finances at a glance. Track income, expenses, and savings in real-time.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>Transaction Tracking</h3>
+          <p>Log every transaction with categories, payment methods, and notes. Never lose track of where your money goes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Budget Management</h3>
+          <p>Set monthly budgets for each category and monitor your spending against your limits.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏆</div>
+          <h3>Savings Goals</h3>
+          <p>Define financial goals and track your progress. Watch your savings grow month by month.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📈</div>
+          <h3>Detailed Reports</h3>
+          <p>Generate comprehensive reports with charts and insights to understand your spending patterns.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Secure & Private</h3>
+          <p>Your data stays in your own database. Complete privacy and control over your financial information.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<div class="splash">
-  <div class="splash-brand">
-    <span class="brand-icon">◈</span>
-    <span>{{ app_name }}</span>
-  </div>
-  <h1>Your money, clearly in view.</h1>
-  <p>Track income, expenses, budgets and savings goals in one clean dashboard. Everything is stored locally in your own database.</p>
-  <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="padding:12px 26px; font-size:15px">Open Dashboard →</a>
-</div>
+  <!-- Use Cases Section -->
+  <section class="parallax-section usecases-section" data-parallax-speed="0.25">
+    <div class="parallax-bg usecases-bg"></div>
+    <div class="section-content">
+      <h2 class="section-title">Perfect for <span class="gradient-text">Every Financial Journey</span></h2>
+      <p class="section-subtitle">Whether you're just starting out or managing a complex budget, we've got you covered.</p>
+      
+      <div class="usecases-grid">
+        <div class="usecase-card">
+          <div class="usecase-number">01</div>
+          <h3>Personal Finance</h3>
+          <p>Track your daily expenses, manage your salary, and build an emergency fund. Take control of your personal finances.</p>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-number">02</div>
+          <h3>Freelancers</h3>
+          <p>Manage irregular income, track business expenses, and save for taxes. Keep your freelance finances organized.</p>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-number">03</div>
+          <h3>Students</h3>
+          <p>Learn money management early. Track part-time income, manage student loans, and build good financial habits.</p>
+        </div>
+        <div class="usecase-card">
+          <div class="usecase-number">04</div>
+          <h3>Families</h3>
+          <p>Manage household budgets, track family expenses, and save for shared goals like vacations or education.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-{% endblock %}
+  <!-- Benefits Section -->
+  <section class="parallax-section benefits-section" data-parallax-speed="0.15">
+    <div class="parallax-bg benefits-bg"></div>
+    <div class="section-content">
+      <h2 class="section-title">Why Choose <span class="gradient-text">{{ app_name }}</span>?</h2>
+      <p class="section-subtitle">Join thousands who have transformed their financial lives.</p>
+      
+      <div class="benefits-grid">
+        <div class="benefit-item">
+          <div class="benefit-icon">✅</div>
+          <h4>Free Forever</h4>
+          <p>No hidden fees, no premium plans. Everything is free, forever.</p>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">⚡</div>
+          <h4>Lightning Fast</h4>
+          <p>Instant updates, real-time calculations. No waiting around.</p>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">🎨</div>
+          <h4>Beautiful Design</h4>
+          <p>Clean, modern interface that makes tracking finances a pleasure.</p>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">📱</div>
+          <h4>Works Everywhere</h4>
+          <p>Access from any device. Desktop, tablet, or mobile.</p>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">🚀</div>
+          <h4>Easy Setup</h4>
+          <p>Get started in minutes. No complex configuration needed.</p>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon">💡</div>
+          <h4>Smart Insights</h4>
+          <p>Understand your spending patterns with detailed reports.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="parallax-section cta-section" data-parallax-speed="0.1">
+    <div class="parallax-bg cta-bg"></div>
+    <div class="section-content">
+      <h2 class="cta-title">Ready to Take Control of Your Money?</h2>
+      <p class="cta-subtitle">Join now and start your journey to financial freedom. It's free, it's fast, and it's for you.</p>
+      <div class="cta-buttons">
+        <a href="{{ url_for('register_page') }}" class="btn btn-primary btn-lg">Start Tracking Now</a>
+        <a href="{{ url_for('login_page') }}" class="btn btn-secondary btn-lg">I Have an Account</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="home-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="brand-icon">◈</span>
+        <span class="brand-name">{{ app_name }}</span>
+      </div>
+      <p class="footer-copy">&copy; {{ current_year }} {{ app_name }}. Your financial journey starts here.</p>
+      <div class="footer-links">
+        <a href="{{ url_for('login_page') }}">Sign In</a>
+        <a href="{{ url_for('register_page') }}">Sign Up</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Parallax scrolling effect
+    document.addEventListener('scroll', function() {
+      const sections = document.querySelectorAll('.parallax-section');
+      const scrollY = window.pageYOffset;
+      
+      sections.forEach(section => {
+        const speed = parseFloat(section.dataset.parallaxSpeed) || 0.2;
+        const bg = section.querySelector('.parallax-bg');
+        if (bg) {
+          const yPos = -(scrollY * speed);
+          bg.style.transform = `translate3d(0, ${yPos}px, 0)`;
+        }
+      });
+    });
+
+    // Smooth scroll for scroll indicator
+    document.querySelector('.scroll-indicator')?.addEventListener('click', function() {
+      document.querySelector('.features-section').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Intersection Observer for fade-in animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.feature-card, .usecase-card, .benefit-item').forEach(el => {
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

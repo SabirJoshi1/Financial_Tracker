@@ -11,9 +11,11 @@ Security notes:
 
 import csv
 import io
+import re
 import decimal
 from datetime import date, datetime
 
+import bcrypt
 import psycopg2
 from flask import (
     Flask,
@@ -22,7 +24,16 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
+)
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_user,
+    login_required,
+    logout_user,
 )
 
 from config import Config, config as app_config
@@ -31,6 +42,45 @@ from db import db_cursor, db_status, is_db_reachable, is_duplicate_error
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.secret_key = Config.SECRET_KEY
+
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'
+
+
+class User(UserMixin):
+    """User class for Flask-Login."""
+    def __init__(self, id, email, full_name, username, email_confirmed):
+        self.id = id
+        self.email = email
+        self.full_name = full_name
+        self.username = username
+        self.email_confirmed = email_confirmed
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        with db_cursor() as (_, cursor):
+            cursor.execute(
+                "SELECT id, email, full_name, username, email_confirmed FROM users WHERE id = %s",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if row:
+                return User(
+                    id=row['id'],
+                    email=row['email'],
+                    full_name=row['full_name'],
+                    username=row['username'],
+                    email_confirmed=row['email_confirmed'],
+                )
+    except psycopg2.Error:
+        pass
+    return None
 
 MAX_AMOUNT = decimal.Decimal("999999999999.99")
 DECIMAL_ZERO = decimal.Decimal("0.00")
@@ -152,6 +202,39 @@ def api_error(message, status=400):
     return jsonify({"error": message}), status
 
 
+def validate_password(password):
+    """Validate password meets security requirements.
+    
+    Requirements:
+    - At least 6 characters
+    - One uppercase letter
+    - One lowercase letter
+    - One number
+    - One special character
+    """
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long."
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter."
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter."
+    if not re.search(r'[0-9]', password):
+        return False, "Password must contain at least one number."
+    if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\'\\:"|,.<>\/?]', password):
+        return False, "Password must contain at least one special character."
+    return True, None
+
+
+def hash_password(password):
+    """Hash a password using bcrypt."""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def check_password(password, password_hash):
+    """Check if a password matches the hash."""
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+
+
 # --------------------------------------------------------------------------
 # Pages
 # --------------------------------------------------------------------------
@@ -161,32 +244,153 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        
+        if not username or not password:
+            return render_template("login.html", error="Please enter both username and password.")
+        
+        try:
+            with db_cursor() as (_, cursor):
+                cursor.execute(
+                    "SELECT id, email, full_name, username, password_hash, email_confirmed FROM users WHERE username = %s",
+                    (username,),
+                )
+                row = cursor.fetchone()
+        except psycopg2.Error as err:
+            return render_template("login.html", error="Database error. Please try again.")
+        
+        if not row or not check_password(password, row['password_hash']):
+            return render_template("login.html", error="Invalid username or password.")
+        
+        user = User(
+            id=row['id'],
+            email=row['email'],
+            full_name=row['full_name'],
+            username=row['username'],
+            email_confirmed=row['email_confirmed'],
+        )
+        login_user(user)
+        return redirect(url_for('dashboard'))
+    
+    return render_template("login.html")
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        
+        # Validation
+        if not full_name or not email or not username or not password:
+            return render_template("register.html", error="All fields are required.",
+                                 full_name=full_name, email=email, username=username)
+        
+        if password != confirm_password:
+            return render_template("register.html", error="Passwords do not match.",
+                                 full_name=full_name, email=email, username=username)
+        
+        valid, msg = validate_password(password)
+        if not valid:
+            return render_template("register.html", error=msg,
+                                 full_name=full_name, email=email, username=username)
+        
+        # Check if username or email already exists
+        try:
+            with db_cursor() as (_, cursor):
+                cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+                if cursor.fetchone():
+                    return render_template("register.html", error="Username already taken.",
+                                         full_name=full_name, email=email, username=username)
+                
+                cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+                if cursor.fetchone():
+                    return render_template("register.html", error="Email already registered.",
+                                         full_name=full_name, email=email, username=username)
+                
+                # Create user
+                password_hashed = hash_password(password)
+                cursor.execute(
+                    """
+                    INSERT INTO users (email, full_name, username, password_hash, email_confirmed)
+                    VALUES (%s, %s, %s, %s, FALSE)
+                    RETURNING id, email, full_name, username, email_confirmed
+                    """,
+                    (email, full_name, username, password_hashed),
+                )
+                conn = cursor.connection
+                conn.commit()
+                row = cursor.fetchone()
+        except psycopg2.Error as err:
+            return render_template("register.html", error="Database error. Please try again.",
+                                 full_name=full_name, email=email, username=username)
+        
+        # Auto login after registration
+        user = User(
+            id=row['id'],
+            email=row['email'],
+            full_name=row['full_name'],
+            username=row['username'],
+            email_confirmed=row['email_confirmed'],
+        )
+        login_user(user)
+        return redirect(url_for('dashboard'))
+    
+    return render_template("register.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+
 @app.route("/dashboard")
+@login_required
 def dashboard():
     return render_template("dashboard.html", active_page="dashboard")
 
 
 @app.route("/transactions")
+@login_required
 def transactions_page():
     return render_template("transactions.html", active_page="transactions")
 
 
 @app.route("/budgets")
+@login_required
 def budgets_page():
     return render_template("budgets.html", active_page="budgets")
 
 
 @app.route("/goals")
+@login_required
 def goals_page():
     return render_template("goals.html", active_page="goals")
 
 
 @app.route("/reports")
+@login_required
 def reports_page():
     return render_template("reports.html", active_page="reports")
 
 
 @app.route("/settings")
+@login_required
 def settings_page():
     return render_template("settings.html", active_page="settings")
 
@@ -196,6 +400,7 @@ def settings_page():
 # --------------------------------------------------------------------------
 
 @app.route("/api/dashboard")
+@login_required
 def api_dashboard():
     today = date.today()
     month, year = today.month, today.year
@@ -423,6 +628,7 @@ def validate_transaction_payload(data):
 
 
 @app.route("/api/transactions", methods=["GET"])
+@login_required
 def api_list_transactions():
     where, params, order = build_transaction_filters(request.args)
     limit = min(max(parse_int(request.args.get("limit"), 100), 1), 500)
@@ -475,6 +681,7 @@ def api_list_transactions():
 
 
 @app.route("/api/transactions/<int:tx_id>", methods=["GET"])
+@login_required
 def api_get_transaction(tx_id):
     try:
         with db_cursor() as (_, cursor):
@@ -497,6 +704,7 @@ def api_get_transaction(tx_id):
 
 
 @app.route("/api/transactions", methods=["POST"])
+@login_required
 def api_create_transaction():
     data = request.get_json(silent=True)
     if data is None:
@@ -543,6 +751,7 @@ def api_create_transaction():
 
 
 @app.route("/api/transactions/<int:tx_id>", methods=["PUT"])
+@login_required
 def api_update_transaction(tx_id):
     data = request.get_json(silent=True)
     if data is None:
@@ -592,6 +801,7 @@ def api_update_transaction(tx_id):
 
 
 @app.route("/api/transactions/<int:tx_id>", methods=["DELETE"])
+@login_required
 def api_delete_transaction(tx_id):
     try:
         with db_cursor() as (conn, cursor):
@@ -644,6 +854,7 @@ def budget_status(percent):
 
 
 @app.route("/api/budgets", methods=["GET"])
+@login_required
 def api_list_budgets():
     today = date.today()
     month = parse_int(request.args.get("month"), today.month)
@@ -712,6 +923,7 @@ def api_list_budgets():
 
 
 @app.route("/api/budgets", methods=["POST"])
+@login_required
 def api_create_budget():
     data = request.get_json(silent=True)
     if data is None:
@@ -747,6 +959,7 @@ def api_create_budget():
 
 
 @app.route("/api/budgets/<int:budget_id>", methods=["PUT"])
+@login_required
 def api_update_budget(budget_id):
     data = request.get_json(silent=True)
     if data is None:
@@ -784,6 +997,7 @@ def api_update_budget(budget_id):
 
 
 @app.route("/api/budgets/<int:budget_id>", methods=["DELETE"])
+@login_required
 def api_delete_budget(budget_id):
     try:
         with db_cursor() as (conn, cursor):
@@ -834,6 +1048,7 @@ def validate_goal_payload(data):
 
 
 @app.route("/api/goals", methods=["GET"])
+@login_required
 def api_list_goals():
     try:
         with db_cursor() as (_, cursor):
@@ -869,6 +1084,7 @@ def api_list_goals():
 
 
 @app.route("/api/goals", methods=["POST"])
+@login_required
 def api_create_goal():
     data = request.get_json(silent=True)
     if data is None:
@@ -902,6 +1118,7 @@ def api_create_goal():
 
 
 @app.route("/api/goals/<int:goal_id>", methods=["PUT"])
+@login_required
 def api_update_goal(goal_id):
     data = request.get_json(silent=True)
     if data is None:
@@ -939,6 +1156,7 @@ def api_update_goal(goal_id):
 
 
 @app.route("/api/goals/<int:goal_id>/contribute", methods=["POST"])
+@login_required
 def api_contribute_to_goal(goal_id):
     data = request.get_json(silent=True) or {}
     amount = parse_amount(data.get("amount"))
@@ -969,6 +1187,7 @@ def api_contribute_to_goal(goal_id):
 
 
 @app.route("/api/goals/<int:goal_id>", methods=["DELETE"])
+@login_required
 def api_delete_goal(goal_id):
     try:
         with db_cursor() as (conn, cursor):
@@ -987,6 +1206,7 @@ def api_delete_goal(goal_id):
 # --------------------------------------------------------------------------
 
 @app.route("/api/reports", methods=["GET"])
+@login_required
 def api_reports():
     today = date.today()
     month = parse_int(request.args.get("month"), today.month)
@@ -1124,6 +1344,7 @@ def api_reports():
 # --------------------------------------------------------------------------
 
 @app.route("/api/categories")
+@login_required
 def api_categories():
     return jsonify(
         {
@@ -1148,6 +1369,7 @@ def api_health():
 
 
 @app.route("/api/export/transactions.csv")
+@login_required
 def api_export_transactions():
     where, params, order = build_transaction_filters(request.args)
     try:

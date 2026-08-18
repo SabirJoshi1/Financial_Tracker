@@ -12,3 +12,6 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+
+.vercel
+.env*

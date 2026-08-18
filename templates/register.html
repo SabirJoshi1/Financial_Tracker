@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Create your Financial Tracker account">
+  <title>Sign Up · {{ app_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body class="auth-body">
+
+  <!-- Animated background -->
+  <div class="auth-bg">
+    <div class="auth-bg-gradient"></div>
+    <div class="auth-bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+  </div>
+
+  <div class="auth-container">
+    <!-- Left side - Branding -->
+    <div class="auth-branding">
+      <div class="auth-brand-content">
+        <span class="brand-icon-large">◈</span>
+        <h1>{{ app_name }}</h1>
+        <p>Start your financial journey today.</p>
+        <div class="auth-features">
+          <div class="auth-feature">
+            <span class="feature-check">✓</span>
+            <span>100% free to use</span>
+          </div>
+          <div class="auth-feature">
+            <span class="feature-check">✓</span>
+            <span>No credit card required</span>
+          </div>
+          <div class="auth-feature">
+            <span class="feature-check">✓</span>
+            <span>Your data stays private</span>
+          </div>
+          <div class="auth-feature">
+            <span class="feature-check">✓</span>
+            <span>Set up in minutes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right side - Register Form -->
+    <div class="auth-form-container">
+      <div class="auth-form-wrapper glass-card">
+        <div class="auth-form-header">
+          <h2>Create Account</h2>
+          <p>Join us and take control of your finances</p>
+        </div>
+
+        {% if error %}
+        <div class="auth-error">
+          <span class="error-icon">⚠</span>
+          {{ error }}
+        </div>
+        {% endif %}
+
+        <form class="auth-form" method="POST" action="{{ url_for('register') }}" id="registerForm">
+          <div class="form-group">
+            <label for="full_name">Full Name</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📝</span>
+              <input type="text" id="full_name" name="full_name" placeholder="Enter your full name" required value="{{ full_name or '' }}">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📧</span>
+              <input type="email" id="email" name="email" placeholder="Enter your email" required value="{{ email or '' }}">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-wrapper">
+              <span class="input-icon">👤</span>
+              <input type="text" id="username" name="username" placeholder="Choose a username" required value="{{ username or '' }}">
+            </div>
+            <small class="form-hint">This will be unique to your account</small>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="password" name="password" placeholder="Create a password" required>
+            </div>
+            <div class="password-requirements">
+              <span class="req" id="req-length"><span class="req-icon">○</span> At least 6 characters</span>
+              <span class="req" id="req-upper"><span class="req-icon">○</span> One uppercase letter</span>
+              <span class="req" id="req-lower"><span class="req-icon">○</span> One lowercase letter</span>
+              <span class="req" id="req-number"><span class="req-icon">○</span> One number</span>
+              <span class="req" id="req-special"><span class="req-icon">○</span> One special character</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required>
+            </div>
+            <div class="password-match" id="passwordMatch"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-auth" id="submitBtn">
+            Create Account
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          <p>Already have an account? <a href="{{ url_for('login_page') }}">Sign in</a></p>
+        </div>
+
+        <div class="auth-home-link">
+          <a href="{{ url_for('index') }}">← Back to Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('registerForm');
+
+    const requirements = {
+      length: { el: document.getElementById('req-length'), test: p => p.length >= 6 },
+      upper: { el: document.getElementById('req-upper'), test: p => /[A-Z]/.test(p) },
+      lower: { el: document.getElementById('req-lower'), test: p => /[a-z]/.test(p) },
+      number: { el: document.getElementById('req-number'), test: p => /[0-9]/.test(p) },
+      special: { el: document.getElementById('req-special'), test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) }
+    };
+
+    function updateRequirements() {
+      const pw = password.value;
+      let allMet = true;
+      
+      for (const [key, req] of Object.entries(requirements)) {
+        const met = req.test(pw);
+        req.el.classList.toggle('met', met);
+        req.el.querySelector('.req-icon').textContent = met ? '✓' : '○';
+        if (!met) allMet = false;
+      }
+      
+      return allMet;
+    }
+
+    function checkPasswordMatch() {
+      const match = password.value && confirmPassword.value && password.value === confirmPassword.value;
+      const matchEl = document.getElementById('passwordMatch');
+      
+      if (confirmPassword.value) {
+        matchEl.textContent = match ? '✓ Passwords match' : '✗ Passwords do not match';
+        matchEl.className = 'password-match ' + (match ? 'match' : 'no-match');
+      } else {
+        matchEl.textContent = '';
+        matchEl.className = 'password-match';
+      }
+      
+      return match;
+    }
+
+    password.addEventListener('input', () => {
+      updateRequirements();
+      checkPasswordMatch();
+    });
+
+    confirmPassword.addEventListener('input', checkPasswordMatch);
+
+    form.addEventListener('submit', function(e) {
+      if (!updateRequirements() || !checkPasswordMatch()) {
+        e.preventDefault();
+      }
+    });
+
+    // Add focus effects to inputs
+    document.querySelectorAll('.input-wrapper input').forEach(input => {
+      input.addEventListener('focus', function() {
+        this.parentElement.classList.add('focused');
+      });
+      input.addEventListener('blur', function() {
+        this.parentElement.classList.remove('focused');
+      });
+    });
+  </script>
+</body>
+</html>
