@@ -1,11 +1,15 @@
 {
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
+  "functions": {
+    "app.py": {
+      "includeFiles": "{templates/**,static/**,config.py,db.py}",
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "app.py"
