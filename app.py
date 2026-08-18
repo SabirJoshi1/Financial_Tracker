@@ -412,7 +412,9 @@ def api_dashboard():
                     COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS total_income,
                     COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS total_expense
                 FROM transactions
-                """
+                WHERE user_id = %s
+                """,
+                (current_user.id,),
             )
             totals = cursor.fetchone()
 
@@ -422,9 +424,9 @@ def api_dashboard():
                     COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS income,
                     COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expense
                 FROM transactions
-                WHERE EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
+                WHERE user_id = %s AND EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
                 """,
-                (year, month),
+                (current_user.id, year, month),
             )
             month_totals = cursor.fetchone()
 
@@ -432,12 +434,12 @@ def api_dashboard():
                 """
                 SELECT category, COALESCE(SUM(amount), 0) AS amount
                 FROM transactions
-                WHERE type = 'expense'
+                WHERE user_id = %s AND type = 'expense'
                   AND EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
                 GROUP BY category
                 ORDER BY amount DESC
                 """,
-                (year, month),
+                (current_user.id, year, month),
             )
             category_rows = cursor.fetchall()
 
@@ -447,10 +449,11 @@ def api_dashboard():
                        COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS income,
                        COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expense
                 FROM transactions
-                WHERE transaction_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')
+                WHERE user_id = %s AND transaction_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')
                 GROUP BY month
                 ORDER BY month
-                """
+                """,
+                (current_user.id,),
             )
             trend_rows = cursor.fetchall()
 
@@ -459,9 +462,11 @@ def api_dashboard():
                 SELECT id, type, description, amount, category, transaction_date,
                        payment_method, notes, created_at
                 FROM transactions
+                WHERE user_id = %s
                 ORDER BY transaction_date DESC, id DESC
                 LIMIT 7
-                """
+                """,
+                (current_user.id,),
             )
             recent = cursor.fetchall()
 
@@ -469,9 +474,9 @@ def api_dashboard():
                 """
                 SELECT COALESCE(SUM(budget_amount), 0) AS total_budget
                 FROM budgets
-                WHERE month = %s AND year = %s
+                WHERE user_id = %s AND month = %s AND year = %s
                 """,
-                (month, year),
+                (current_user.id, month, year),
             )
             budget_total = cursor.fetchone()["total_budget"]
 
@@ -480,13 +485,14 @@ def api_dashboard():
                 SELECT COALESCE(SUM(t.amount), 0) AS spent
                 FROM budgets b
                 LEFT JOIN transactions t
-                    ON t.type = 'expense'
+                    ON t.user_id = b.user_id
+                   AND t.type = 'expense'
                    AND t.category = b.category
                    AND EXTRACT(YEAR FROM t.transaction_date) = b.year
                    AND EXTRACT(MONTH FROM t.transaction_date) = b.month
-                WHERE b.month = %s AND b.year = %s
+                WHERE b.user_id = %s AND b.month = %s AND b.year = %s
                 """,
-                (month, year),
+                (current_user.id, month, year),
             )
             budget_spent = cursor.fetchone()["spent"]
     except psycopg2.Error as err:
@@ -549,6 +555,9 @@ def build_transaction_filters(args):
     """Build a parameterised WHERE clause, params list and ORDER BY string."""
     clauses = []
     params = []
+
+    clauses.append("user_id = %s")
+    params.append(current_user.id)
 
     ftype = args.get("type", "").strip().lower()
     if ftype in ("income", "expense"):
@@ -689,9 +698,9 @@ def api_get_transaction(tx_id):
                 """
                 SELECT id, type, description, amount, category, transaction_date,
                        payment_method, notes, created_at
-                FROM transactions WHERE id = %s
+                FROM transactions WHERE id = %s AND user_id = %s
                 """,
-                (tx_id,),
+                (tx_id, current_user.id),
             )
             row = cursor.fetchone()
     except psycopg2.Error as err:
@@ -717,12 +726,13 @@ def api_create_transaction():
         with db_cursor() as (conn, cursor):
             cursor.execute(
                 """
-                INSERT INTO transactions (type, description, amount, category,
+                INSERT INTO transactions (user_id, type, description, amount, category,
                                           transaction_date, payment_method, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
+                    current_user.id,
                     cleaned["type"],
                     cleaned["description"],
                     cleaned["amount"],
@@ -762,7 +772,7 @@ def api_update_transaction(tx_id):
 
     try:
         with db_cursor() as (conn, cursor):
-            cursor.execute("SELECT id FROM transactions WHERE id = %s", (tx_id,))
+            cursor.execute("SELECT id FROM transactions WHERE id = %s AND user_id = %s", (tx_id, current_user.id))
             if not cursor.fetchone():
                 return api_error("Transaction not found.", 404)
             cursor.execute(
@@ -770,7 +780,7 @@ def api_update_transaction(tx_id):
                 UPDATE transactions
                 SET type = %s, description = %s, amount = %s, category = %s,
                     transaction_date = %s, payment_method = %s, notes = %s
-                WHERE id = %s
+                WHERE id = %s AND user_id = %s
                 """,
                 (
                     cleaned["type"],
@@ -781,6 +791,7 @@ def api_update_transaction(tx_id):
                     cleaned["payment_method"],
                     cleaned["notes"],
                     tx_id,
+                    current_user.id,
                 ),
             )
             conn.commit()
@@ -788,9 +799,9 @@ def api_update_transaction(tx_id):
                 """
                 SELECT id, type, description, amount, category, transaction_date,
                        payment_method, notes, created_at
-                FROM transactions WHERE id = %s
+                FROM transactions WHERE id = %s AND user_id = %s
                 """,
-                (tx_id,),
+                (tx_id, current_user.id),
             )
             row = cursor.fetchone()
     except psycopg2.Error as err:
@@ -805,10 +816,10 @@ def api_update_transaction(tx_id):
 def api_delete_transaction(tx_id):
     try:
         with db_cursor() as (conn, cursor):
-            cursor.execute("SELECT id FROM transactions WHERE id = %s", (tx_id,))
+            cursor.execute("SELECT id FROM transactions WHERE id = %s AND user_id = %s", (tx_id, current_user.id))
             if not cursor.fetchone():
                 return api_error("Transaction not found.", 404)
-            cursor.execute("DELETE FROM transactions WHERE id = %s", (tx_id,))
+            cursor.execute("DELETE FROM transactions WHERE id = %s AND user_id = %s", (tx_id, current_user.id))
             conn.commit()
     except psycopg2.Error as err:
         return api_error(f"Database error: {err}", 500)
@@ -870,15 +881,16 @@ def api_list_budgets():
                        COALESCE(SUM(t.amount), 0) AS spent
                 FROM budgets b
                 LEFT JOIN transactions t
-                    ON t.type = 'expense'
+                    ON t.user_id = b.user_id
+                   AND t.type = 'expense'
                    AND t.category = b.category
                    AND EXTRACT(YEAR FROM t.transaction_date) = b.year
                    AND EXTRACT(MONTH FROM t.transaction_date) = b.month
-                WHERE b.month = %s AND b.year = %s
+                WHERE b.user_id = %s AND b.month = %s AND b.year = %s
                 GROUP BY b.id, b.category, b.budget_amount, b.month, b.year
                 ORDER BY b.category
                 """,
-                (month, year),
+                (current_user.id, month, year),
             )
             rows = cursor.fetchall()
     except psycopg2.Error as err:
@@ -936,11 +948,12 @@ def api_create_budget():
         with db_cursor() as (conn, cursor):
             cursor.execute(
                 """
-                INSERT INTO budgets (category, budget_amount, month, year)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO budgets (user_id, category, budget_amount, month, year)
+                VALUES (%s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
+                    current_user.id,
                     cleaned["category"],
                     cleaned["budget_amount"],
                     cleaned["month"],
@@ -970,14 +983,14 @@ def api_update_budget(budget_id):
 
     try:
         with db_cursor() as (conn, cursor):
-            cursor.execute("SELECT id FROM budgets WHERE id = %s", (budget_id,))
+            cursor.execute("SELECT id FROM budgets WHERE id = %s AND user_id = %s", (budget_id, current_user.id))
             if not cursor.fetchone():
                 return api_error("Budget not found.", 404)
             cursor.execute(
                 """
                 UPDATE budgets
                 SET category = %s, budget_amount = %s, month = %s, year = %s
-                WHERE id = %s
+                WHERE id = %s AND user_id = %s
                 """,
                 (
                     cleaned["category"],
@@ -985,6 +998,7 @@ def api_update_budget(budget_id):
                     cleaned["month"],
                     cleaned["year"],
                     budget_id,
+                    current_user.id,
                 ),
             )
             conn.commit()
@@ -1001,10 +1015,10 @@ def api_update_budget(budget_id):
 def api_delete_budget(budget_id):
     try:
         with db_cursor() as (conn, cursor):
-            cursor.execute("SELECT id FROM budgets WHERE id = %s", (budget_id,))
+            cursor.execute("SELECT id FROM budgets WHERE id = %s AND user_id = %s", (budget_id, current_user.id))
             if not cursor.fetchone():
                 return api_error("Budget not found.", 404)
-            cursor.execute("DELETE FROM budgets WHERE id = %s", (budget_id,))
+            cursor.execute("DELETE FROM budgets WHERE id = %s AND user_id = %s", (budget_id, current_user.id))
             conn.commit()
     except psycopg2.Error as err:
         return api_error(f"Database error: {err}", 500)
@@ -1056,8 +1070,9 @@ def api_list_goals():
                 """
                 SELECT id, goal_name, target_amount, current_amount, target_date,
                        description, created_at
-                FROM goals ORDER BY created_at DESC, id DESC
-                """
+                FROM goals WHERE user_id = %s ORDER BY created_at DESC, id DESC
+                """,
+                (current_user.id,),
             )
             rows = cursor.fetchall()
     except psycopg2.Error as err:
@@ -1097,11 +1112,12 @@ def api_create_goal():
         with db_cursor() as (conn, cursor):
             cursor.execute(
                 """
-                INSERT INTO goals (goal_name, target_amount, current_amount, target_date, description)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO goals (user_id, goal_name, target_amount, current_amount, target_date, description)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
+                    current_user.id,
                     cleaned["goal_name"],
                     cleaned["target_amount"],
                     cleaned["current_amount"],
@@ -1129,7 +1145,7 @@ def api_update_goal(goal_id):
 
     try:
         with db_cursor() as (conn, cursor):
-            cursor.execute("SELECT id FROM goals WHERE id = %s", (goal_id,))
+            cursor.execute("SELECT id FROM goals WHERE id = %s AND user_id = %s", (goal_id, current_user.id))
             if not cursor.fetchone():
                 return api_error("Goal not found.", 404)
             cursor.execute(
@@ -1137,7 +1153,7 @@ def api_update_goal(goal_id):
                 UPDATE goals
                 SET goal_name = %s, target_amount = %s, current_amount = %s,
                     target_date = %s, description = %s
-                WHERE id = %s
+                WHERE id = %s AND user_id = %s
                 """,
                 (
                     cleaned["goal_name"],
@@ -1146,6 +1162,7 @@ def api_update_goal(goal_id):
                     cleaned["target_date"],
                     cleaned["description"],
                     goal_id,
+                    current_user.id,
                 ),
             )
             conn.commit()
@@ -1166,7 +1183,7 @@ def api_contribute_to_goal(goal_id):
     try:
         with db_cursor() as (conn, cursor):
             cursor.execute(
-                "SELECT id, current_amount FROM goals WHERE id = %s", (goal_id,)
+                "SELECT id, current_amount FROM goals WHERE id = %s AND user_id = %s", (goal_id, current_user.id)
             )
             row = cursor.fetchone()
             if not row:
@@ -1176,8 +1193,8 @@ def api_contribute_to_goal(goal_id):
             if new_current > MAX_AMOUNT:
                 return api_error("Goal would exceed the maximum allowed amount.", 400)
             cursor.execute(
-                "UPDATE goals SET current_amount = %s WHERE id = %s",
-                (new_current, goal_id),
+                "UPDATE goals SET current_amount = %s WHERE id = %s AND user_id = %s",
+                (new_current, goal_id, current_user.id),
             )
             conn.commit()
     except psycopg2.Error as err:
@@ -1191,10 +1208,10 @@ def api_contribute_to_goal(goal_id):
 def api_delete_goal(goal_id):
     try:
         with db_cursor() as (conn, cursor):
-            cursor.execute("SELECT id FROM goals WHERE id = %s", (goal_id,))
+            cursor.execute("SELECT id FROM goals WHERE id = %s AND user_id = %s", (goal_id, current_user.id))
             if not cursor.fetchone():
                 return api_error("Goal not found.", 404)
-            cursor.execute("DELETE FROM goals WHERE id = %s", (goal_id,))
+            cursor.execute("DELETE FROM goals WHERE id = %s AND user_id = %s", (goal_id, current_user.id))
             conn.commit()
     except psycopg2.Error as err:
         return api_error(f"Database error: {err}", 500)
@@ -1221,9 +1238,9 @@ def api_reports():
                 SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS income,
                        COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expense
                 FROM transactions
-                WHERE EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
+                WHERE user_id = %s AND EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
                 """,
-                (year, month),
+                (current_user.id, year, month),
             )
             totals = cursor.fetchone()
 
@@ -1231,12 +1248,12 @@ def api_reports():
                 """
                 SELECT category, COALESCE(SUM(amount), 0) AS amount, COUNT(*) AS count
                 FROM transactions
-                WHERE type = 'expense'
+                WHERE user_id = %s AND type = 'expense'
                   AND EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
                 GROUP BY category
                 ORDER BY amount DESC
                 """,
-                (year, month),
+                (current_user.id, year, month),
             )
             categories = cursor.fetchall()
 
@@ -1246,15 +1263,16 @@ def api_reports():
                        COALESCE(SUM(t.amount), 0) AS spent
                 FROM budgets b
                 LEFT JOIN transactions t
-                    ON t.type = 'expense'
+                    ON t.user_id = b.user_id
+                   AND t.type = 'expense'
                    AND t.category = b.category
                    AND EXTRACT(YEAR FROM t.transaction_date) = b.year
                    AND EXTRACT(MONTH FROM t.transaction_date) = b.month
-                WHERE b.month = %s AND b.year = %s
+                WHERE b.user_id = %s AND b.month = %s AND b.year = %s
                 GROUP BY b.id, b.category, b.budget_amount
                 ORDER BY b.category
                 """,
-                (month, year),
+                (current_user.id, month, year),
             )
             budget_rows = cursor.fetchall()
 
@@ -1262,12 +1280,12 @@ def api_reports():
                 """
                 SELECT transaction_date, COALESCE(SUM(amount), 0) AS amount
                 FROM transactions
-                WHERE type = 'expense'
+                WHERE user_id = %s AND type = 'expense'
                   AND EXTRACT(YEAR FROM transaction_date) = %s AND EXTRACT(MONTH FROM transaction_date) = %s
                 GROUP BY transaction_date
                 ORDER BY transaction_date
                 """,
-                (year, month),
+                (current_user.id, year, month),
             )
             daily_rows = cursor.fetchall()
     except psycopg2.Error as err:
